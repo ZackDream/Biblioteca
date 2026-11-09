@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Control de Préstamos y Pagos de Biblioteca</title>
+  <meta name="description" content="Portal web escolar para el control de préstamos de libros, adeudos de multas y validación de transferencias bancarias.">
+  <link rel="stylesheet" href="style.css">
+  <!-- Feather Icons for modern vector icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       LOGIN SCREEN
+       ========================================================================== -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-box">
+      <div class="login-header">
+        <div class="login-logo">
+          <i data-feather="book-open"></i>
+        </div>
+        <h2>Sistema de Biblioteca</h2>
+        <p>Control de Préstamos y Pagos</p>
+      </div>
+
+      <div class="login-tabs">
+        <button id="login-tab-admin" class="login-tab active" onclick="switchLoginTab('admin')">Administrativo</button>
+        <button id="login-tab-user" class="login-tab" onclick="switchLoginTab('user')">Estudiante / Docente</button>
+      </div>
+
+      <!-- Admin Login Form -->
+      <form id="form-login-admin" onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+          <label for="login-admin-user">Usuario de Acceso</label>
+          <div class="input-wrapper">
+            <i data-feather="user"></i>
+            <input type="text" id="login-admin-user" class="form-input" placeholder="Ej. admin" required value="admin">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-admin-pass">Contraseña</label>
+          <div class="input-wrapper">
+            <i data-feather="lock"></i>
+            <input type="password" id="login-admin-pass" class="form-input" placeholder="••••••••" required value="admin">
+          </div>
+        </div>
+        <button type="submit" id="btn-submit-login-admin" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+          <i data-feather="log-in"></i> Iniciar Sesión como Admin
+        </button>
+      </form>
+
+      <!-- User Login Form -->
+      <form id="form-login-user" onsubmit="handleUserLogin(event)" style="display: none;">
+        <div class="form-group">
+          <label for="login-user-matricula">Matrícula Escolar</label>
+          <div class="input-wrapper">
+            <i data-feather="hash"></i>
+            <input type="text" id="login-user-matricula" class="form-input" placeholder="Ej. EST123, DOC789" required>
+          </div>
+        </div>
+        
+        <div class="login-credentials-helper">
+          <h4>Matrículas de Prueba:</h4>
+          <ul>
+            <li>Estudiante sin adeudo: <span class="code-tag" onclick="fillMatricula('EST101')">EST101</span> (Sofía Ruiz)</li>
+            <li>Estudiante con adeudo: <span class="code-tag" onclick="fillMatricula('EST102')">EST102</span> (Mateo Pérez)</li>
+            <li>Docente con adeudo: <span class="code-tag" onclick="fillMatricula('DOC201')">DOC201</span> (Carlos Gómez)</li>
+          </ul>
+        </div>
+
+        <button type="submit" id="btn-submit-login-user" class="btn btn-accent" style="width: 100%;">
+          <i data-feather="user-check"></i> Ingresar al Portal
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MAIN APP CONTAINER (Visible after login)
+       ========================================================================== -->
+  <div id="app-container" style="display: none;">
+    
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-icon">
+            <i data-feather="book"></i>
+          </div>
+          <span class="brand-name">BIBLIO-CTRL</span>
+        </div>
+
+        <div class="user-badge">
+          <span id="sidebar-user-role" class="role-tag">Cargando...</span>
+          <span id="sidebar-user-name" class="user-name">Cargando...</span>
+        </div>
+
+        <nav>
+          <!-- Admin Sidebar Links -->
+          <ul id="sidebar-menu-admin" class="nav-links">
+            <li class="active" id="nav-item-dashboard"><a href="#" onclick="showView('admin-dashboard')"><i data-feather="grid"></i> Dashboard</a></li>
+            <li id="nav-item-users"><a href="#" onclick="showView('admin-users')"><i data-feather="users"></i> Usuarios</a></li>
+            <li id="nav-item-books"><a href="#" onclick="showView('admin-books')"><i data-feather="book-open"></i> Libros</a></li>
+            <li id="nav-item-loans"><a href="#" onclick="showView('admin-loans')"><i data-feather="calendar"></i> Préstamos <span id="sidebar-loans-badge" class="badge badge-warning" style="display: none; margin-left: auto; font-size: 0.68rem; padding: 0.15rem 0.45rem;">0</span></a></li>
+            <li id="nav-item-debts"><a href="#" onclick="showView('admin-debts')"><i data-feather="dollar-sign"></i> Devoluciones y Adeudos</a></li>
+            <li id="nav-item-db"><a href="#" onclick="showView('admin-db')"><i data-feather="database"></i> Base de Datos</a></li>
+            <li id="nav-item-etapa6"><a href="./pruebas_etapa6/reporte_etapa_6_integracion_y_pruebas.html" target="_blank"><i data-feather="check-circle"></i> Pruebas Etapa 6 <span class="badge badge-success" style="margin-left: auto; font-size: 0.68rem; padding: 0.15rem 0.45rem;">OK</span></a></li>
+          </ul>
+
+          <!-- User Sidebar Links -->
+          <ul id="sidebar-menu-user" class="nav-links" style="display: none;">
+            <li class="active" id="nav-item-catalog"><a href="#" onclick="showView('user-catalog')"><i data-feather="search"></i> Catálogo de Libros</a></li>
+            <li id="nav-item-myloans"><a href="#" onclick="showView('user-myloans')"><i data-feather="book-open"></i> Mis Préstamos <span id="sidebar-myloans-badge" class="badge badge-warning" style="display: none; margin-left: auto; font-size: 0.68rem; padding: 0.15rem 0.45rem;">0</span></a></li>
+            <li id="nav-item-mydebts"><a href="#" onclick="showView('user-mydebts')"><i data-feather="alert-triangle"></i> Adeudos y Pagos</a></li>
+            <li id="nav-item-myreceipts"><a href="#" onclick="showView('user-myreceipts')"><i data-feather="file-text"></i> Mis Comprobantes</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="theme-toggle">
+          <span>Tema</span>
+          <button id="theme-toggle-btn" class="theme-switch" onclick="toggleTheme()" title="Cambiar Tema">
+            <i id="theme-toggle-icon" data-feather="sun"></i>
+          </button>
+        </div>
+        <button id="btn-logout" class="logout-btn" onclick="handleLogout()">
+          <i data-feather="log-out"></i> Cerrar Sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT VIEW AREA -->
+    <main class="main-content">
+      <header>
+        <div class="header-title">
+          <h1 id="view-title">Dashboard</h1>
+          <p id="view-subtitle">Resumen general del sistema de biblioteca</p>
+        </div>
+        <div class="header-actions">
+          <!-- Notification Bell Component -->
+          <div class="notif-wrapper" id="notif-wrapper">
+            <button type="button" id="btn-notif-bell" class="notif-bell-btn" onclick="toggleNotificationPanel()" title="Centro de Notificaciones">
+              <i data-feather="bell"></i>
+              <span id="notif-badge-count" class="notif-badge" style="display: none;">0</span>
+            </button>
+
+            <!-- Notifications Dropdown Popover -->
+            <div id="notif-dropdown" class="notif-dropdown" style="display: none;">
+              <div class="notif-dropdown-header">
+                <div class="notif-dropdown-title">
+                  <i data-feather="bell" style="width: 16px; height: 16px; color: var(--primary);"></i>
+                  <h4>Notificaciones</h4>
+                </div>
+                <span id="notif-count-pill" class="badge badge-warning">0 activas</span>
+              </div>
+              <div id="notif-list-container" class="notif-items-list">
+                <!-- Notifications loaded dynamically -->
+              </div>
+              <div class="notif-dropdown-footer">
+                <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-size: 0.8rem;" onclick="handleNotifViewAll()">
+                  <i data-feather="arrow-right" style="width: 13px; height: 13px;"></i> Ver Mis Préstamos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backend REST Status Indicator -->
+          <div id="backend-status-pill" class="backend-status-pill" title="Verificando conexión con el backend">
+            <span class="status-dot"></span>
+            <span id="backend-status-text">Detectando API...</span>
+          </div>
+
+          <div class="date-indicator">
+            <i data-feather="clock" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i>
+            <span id="current-date-str">2026-05-26</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ==========================================================================
+           ADMIN VIEWS
+           ========================================================================== -->
+
+      <!-- ADMIN DASHBOARD -->
+      <div id="view-admin-dashboard" class="app-view active">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon"><i data-feather="book-open"></i></div>
+            <div class="metric-info">
+              <span id="metric-total-books" class="metric-value">0</span>
+              <span class="metric-label">Libros Totales</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon"><i data-feather="calendar"></i></div>
+            <div class="metric-info">
+              <span id="metric-active-loans" class="metric-value">0</span>
+              <span class="metric-label">Préstamos Activos</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon"><i data-feather="alert-circle"></i></div>
+            <div class="metric-info">
+              <span id="metric-overdue-loans" class="metric-value">0</span>
+              <span class="metric-label">Préstamos Vencidos</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon"><i data-feather="dollar-sign"></i></div>
+            <div class="metric-info">
+              <span id="metric-pending-debts" class="metric-value">$0.00</span>
+              <span class="metric-label">Adeudos Pendientes</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="split-layout">
+          <!-- Quick Loan Register -->
+          <div class="glass-panel">
+            <h3><i data-feather="plus-circle" style="vertical-align: middle; margin-right: 0.5rem; color: var(--primary);"></i>Registrar Préstamo Rápido</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Crea un préstamo de forma rápida validando datos.</p>
+            
+            <form id="form-quick-loan" onsubmit="handleRegisterLoan(event, true)">
+              <div class="form-group">
+                <label for="quick-loan-user">Matrícula del Usuario</label>
+                <div class="input-wrapper">
+                  <i data-feather="user"></i>
+                  <input type="text" id="quick-loan-user" class="form-input" placeholder="Ej. EST101" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="quick-loan-book">ID o Título del Libro</label>
+                <div class="input-wrapper">
+                  <i data-feather="book"></i>
+                  <select id="quick-loan-book" class="form-input" required>
+                    <option value="">Seleccione un libro disponible...</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" id="btn-submit-quick-loan" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i data-feather="check"></i> Validar y Registrar
+              </button>
+            </form>
+          </div>
+
+          <!-- Active Overdue List -->
+          <div class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+            <h3><i data-feather="alert-triangle" style="vertical-align: middle; margin-right: 0.5rem; color: var(--danger);"></i>Alertas de Retraso Activas</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">Préstamos que han superado su fecha límite y generarán recargos.</p>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Libro</th>
+                    <th>F. Límite</th>
+                    <th>Días Retraso</th>
+                    <th>Monto Est.</th>
+                  </tr>
+                </thead>
+                <tbody id="table-dashboard-overdues">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando alertas...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN USERS SECTION -->
+      <div id="view-admin-users" class="app-view">
+        <div class="split-layout">
+          <!-- Register User Form -->
+          <div class="glass-panel">
+            <h3><i data-feather="user-plus" style="vertical-align: middle; margin-right: 0.5rem; color: var(--primary);"></i>Registrar Usuario</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Agrega estudiantes o docentes al sistema bibliotecario.</p>
+            <form id="form-register-user" onsubmit="handleRegisterUser(event)">
+              <div class="form-group">
+                <label for="reg-user-nombre">Nombre Completo</label>
+                <input type="text" id="reg-user-nombre" class="form-input" placeholder="Ej. Ana Laura López" required>
+              </div>
+              <div class="form-group">
+                <label for="reg-user-matricula">Matrícula (Única)</label>
+                <input type="text" id="reg-user-matricula" class="form-input" placeholder="Ej. EST105 o DOC203" required>
+              </div>
+              <div class="form-group">
+                <label for="reg-user-correo">Correo Electrónico</label>
+                <input type="email" id="reg-user-correo" class="form-input" placeholder="ejemplo@correo.com" required>
+              </div>
+              <div class="form-group">
+                <label for="reg-user-tipo">Tipo de Usuario</label>
+                <select id="reg-user-tipo" class="form-input" required>
+                  <option value="Estudiante">Estudiante</option>
+                  <option value="Docente">Docente</option>
+                </select>
+              </div>
+              <button type="submit" id="btn-submit-reg-user" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i data-feather="user-plus"></i> Registrar en Sistema
+              </button>
+            </form>
+          </div>
+
+          <!-- Users List -->
+          <div class="glass-panel">
+            <div class="search-bar">
+              <div class="input-wrapper" style="flex-grow: 1;">
+                <i data-feather="search"></i>
+                <input type="text" id="search-users-input" class="form-input" placeholder="Buscar por nombre, matrícula o correo..." oninput="filterUsersTable()">
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Matrícula</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Tipo</th>
+                  </tr>
+                </thead>
+                <tbody id="table-users-list">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando lista de usuarios...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN BOOKS SECTION -->
+      <div id="view-admin-books" class="app-view">
+        <div class="split-layout">
+          <!-- Register Book Form -->
+          <div class="glass-panel">
+            <h3><i data-feather="plus-square" style="vertical-align: middle; margin-right: 0.5rem; color: var(--primary);"></i>Añadir Nuevo Libro</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Crea un registro de catálogo para inventariar libros.</p>
+            <form id="form-register-book" onsubmit="handleRegisterBook(event)">
+              <div class="form-group">
+                <label for="reg-book-titulo">Título del Libro</label>
+                <input type="text" id="reg-book-titulo" class="form-input" placeholder="Ej. Don Quijote de la Mancha" required>
+              </div>
+              <div class="form-group">
+                <label for="reg-book-autor">Autor</label>
+                <input type="text" id="reg-book-autor" class="form-input" placeholder="Ej. Miguel de Cervantes" required>
+              </div>
+              <div class="form-group">
+                <label for="reg-book-editorial">Editorial</label>
+                <input type="text" id="reg-book-editorial" class="form-input" placeholder="Ej. Alfaguara" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-book-categoria">Categoría</label>
+                  <input type="text" id="reg-book-categoria" class="form-input" placeholder="Ej. Literatura" required>
+                </div>
+                <div class="form-group">
+                  <label for="reg-book-copias">Cantidad de Copias</label>
+                  <input type="number" id="reg-book-copias" class="form-input" value="1" min="1" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="reg-book-estante"><i data-feather="map-pin" style="width: 14px; height: 14px; vertical-align: middle;"></i> Estante / Ubicación Física en Biblioteca</label>
+                <div class="input-wrapper">
+                  <i data-feather="map-pin"></i>
+                  <input type="text" id="reg-book-estante" class="form-input" placeholder="Ej. Estante A-3, Pasillo Literatura" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="reg-book-imagen">URL de la Portada / Imagen (Opcional)</label>
+                <div class="input-wrapper">
+                  <i data-feather="image"></i>
+                  <input type="url" id="reg-book-imagen" class="form-input" placeholder="https://ejemplo.com/portada.jpg">
+                </div>
+              </div>
+              <button type="submit" id="btn-submit-reg-book" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i data-feather="book-open"></i> Agregar al Inventario
+              </button>
+            </form>
+          </div>
+
+          <!-- Books List -->
+          <div class="glass-panel">
+            <div class="search-bar">
+              <div class="input-wrapper" style="flex-grow: 1;">
+                <i data-feather="search"></i>
+                <input type="text" id="search-books-input" class="form-input" placeholder="Buscar por título, autor, categoría o ID..." oninput="filterBooksTable()">
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Portada</th>
+                    <th>Título</th>
+                    <th>Autor</th>
+                    <th>Editorial</th>
+                    <th>Categoría</th>
+                    <th>Estante / Ubicación</th>
+                    <th>Copias (Disp/Tot)</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="table-books-list">
+                  <tr>
+                    <td colspan="10" style="text-align: center; color: var(--text-muted);">Cargando inventario de libros...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN LOANS SECTION -->
+      <div id="view-admin-loans" class="app-view">
+
+        <!-- PENDING LOAN REQUESTS (Solicitudes de Préstamos Pendientes) -->
+        <div class="glass-panel" id="panel-admin-pending-requests" style="margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="inbox" style="color: var(--accent);"></i>
+                Solicitudes de Préstamos Pendientes de Autorización
+              </h3>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                Autoriza la entrega del libro solicitado. Al autorizarlo, se crea el préstamo y <strong>se retira automáticamente la notificación</strong> del estudiante/docente.
+              </p>
+            </div>
+            <span class="badge badge-warning" id="badge-admin-pending-requests" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">0 pendientes</span>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID Solicitud</th>
+                  <th>Solicitante</th>
+                  <th>Tipo</th>
+                  <th>Libro Solicitado</th>
+                  <th>Copias Disp.</th>
+                  <th>Fecha Solicitud</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="table-admin-pending-requests">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Cargando solicitudes...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- WAITLIST / COLA DE ESPERA PANEL (Libros sin copias disponibles) -->
+        <div class="glass-panel" id="panel-admin-waitlist" style="margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="users" style="color: var(--secondary);"></i>
+                Cola de Espera y Reservas Activas (Libros sin Copias)
+              </h3>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                Lectores formados en lista de espera. Cuando un libro sea devuelto a biblioteca, el sistema notificará automáticamente al lector con el siguiente turno.
+              </p>
+            </div>
+            <span class="badge badge-info" id="badge-admin-waitlist" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">0 en espera</span>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Turno / ID</th>
+                  <th>Lector en Espera</th>
+                  <th>Tipo</th>
+                  <th>Libro Solicitado</th>
+                  <th>Ubicación en Estante</th>
+                  <th>Fecha Registro</th>
+                  <th>Estado en Cola</th>
+                </tr>
+              </thead>
+              <tbody id="table-admin-waitlist">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No hay lectores en lista de espera actualmente.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="split-layout">
+          <!-- Register Loan Form (Detailed Sequence Flow) -->
+          <div class="glass-panel">
+            <h3><i data-feather="calendar" style="vertical-align: middle; margin-right: 0.5rem; color: var(--primary);"></i>Registrar Préstamo</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Crea un registro de préstamo aplicando validaciones estrictas de disponibilidad.</p>
+            <form id="form-detailed-loan" onsubmit="handleRegisterLoan(event, false)">
+              <div class="form-group">
+                <label for="det-loan-usuario">Usuario (Matrícula)</label>
+                <div class="input-wrapper">
+                  <i data-feather="user"></i>
+                  <input type="text" id="det-loan-usuario" class="form-input" placeholder="Ej. EST102" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="det-loan-libro">Libro (ID del Libro)</label>
+                <div class="input-wrapper">
+                  <i data-feather="book"></i>
+                  <input type="number" id="det-loan-libro" class="form-input" placeholder="Ej. 1" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="det-loan-fecha-p">Fecha de Préstamo</label>
+                  <input type="date" id="det-loan-fecha-p" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label for="det-loan-fecha-l">Fecha Límite</label>
+                  <input type="date" id="det-loan-fecha-l" class="form-input" required>
+                </div>
+              </div>
+              <button type="submit" id="btn-submit-det-loan" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i data-feather="check-square"></i> Validar e Iniciar Préstamo
+              </button>
+            </form>
+          </div>
+
+          <!-- Loans History -->
+          <div class="glass-panel">
+            <div class="search-bar" style="margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+              <h3 style="flex-grow: 1; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="file-text" style="color: var(--accent);"></i>
+                Historial General de Préstamos
+              </h3>
+              <div class="input-wrapper" style="width: 250px;">
+                <i data-feather="search"></i>
+                <input type="text" id="search-loans-input" class="form-input" placeholder="Buscar préstamo..." oninput="filterLoansTable()">
+              </div>
+            </div>
+
+            <!-- Enhanced Filter Pills (Todos, Activos, Vencidos, Devueltos) -->
+            <div class="loans-filter-tabs">
+              <button type="button" class="filter-pill active" id="filter-pill-all" onclick="setLoanStatusFilter('all')">
+                <i data-feather="layers"></i> Todos <span class="pill-badge" id="count-pill-all">0</span>
+              </button>
+              <button type="button" class="filter-pill pill-warning" id="filter-pill-activo" onclick="setLoanStatusFilter('activo')">
+                <i data-feather="clock"></i> Activos <span class="pill-badge" id="count-pill-activo">0</span>
+              </button>
+              <button type="button" class="filter-pill pill-danger" id="filter-pill-vencido" onclick="setLoanStatusFilter('vencido')">
+                <i data-feather="alert-octagon"></i> Vencidos <span class="pill-badge" id="count-pill-vencido">0</span>
+              </button>
+              <button type="button" class="filter-pill pill-success" id="filter-pill-devuelto" onclick="setLoanStatusFilter('devuelto')">
+                <i data-feather="check-circle"></i> Devueltos <span class="pill-badge" id="count-pill-devuelto">0</span>
+              </button>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Matrícula</th>
+                    <th>Libro</th>
+                    <th>F. Préstamo</th>
+                    <th>F. Límite</th>
+                    <th>F. Devolución</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="table-loans-list">
+                  <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted);">Cargando historial de préstamos...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN DEBTS & PAYMENTS SECTION -->
+      <div id="view-admin-debts" class="app-view">
+        
+        <!-- Registration of Return -->
+        <div class="glass-panel" style="margin-bottom: 2rem;">
+          <h3><i data-feather="check-circle" style="vertical-align: middle; margin-right: 0.5rem; color: var(--success);"></i>Registrar Devolución Física de Libro</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Registra la entrega física del libro. El sistema calculará automáticamente si existe retraso y generará el adeudo correspondiente.</p>
+          <form id="form-register-return" onsubmit="handleRegisterReturn(event)">
+            <div class="form-row" style="align-items: flex-end;">
+              <div class="form-group">
+                <label for="return-loan-id">ID del Préstamo Activo</label>
+                <select id="return-loan-id" class="form-input" onchange="updateReturnPreview()" required>
+                  <option value="">Seleccione un préstamo activo...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="return-fecha">Fecha de Entrega</label>
+                <input type="date" id="return-fecha" class="form-input" onchange="updateReturnPreview()" required>
+              </div>
+              <div class="form-group">
+                <button type="submit" id="btn-submit-return" class="btn btn-success" style="width: 100%;">
+                  <i data-feather="arrow-down-left"></i> Procesar Devolución
+                </button>
+              </div>
+            </div>
+
+            <!-- Damage assessment by Admin -->
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 12px;">
+              <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 600; margin-bottom: 0;">
+                <input type="checkbox" id="return-has-damage" onchange="toggleDamageInputs(); updateReturnPreview();" style="width: 18px; height: 18px; accent-color: var(--danger);">
+                <span><i data-feather="alert-triangle" style="width: 15px; height: 15px; color: var(--danger); vertical-align: middle;"></i> ¿El libro devuelto presenta <strong>daños físicos</strong>? (Cobrar multa por daños al usuario)</span>
+              </label>
+              
+              <div id="return-damage-fields" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-glass);">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="return-damage-amount">Monto de Multa por Daño ($ MXN)</label>
+                    <div class="input-wrapper">
+                      <i data-feather="dollar-sign"></i>
+                      <input type="number" id="return-damage-amount" class="form-input" min="1" step="5" value="50" placeholder="Ej. 50" oninput="updateReturnPreview()">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="return-damage-reason">Descripción / Detalle del Daño</label>
+                    <input type="text" id="return-damage-reason" class="form-input" placeholder="Ej. Hojas desprendidas, lomo roto, manchas" oninput="updateReturnPreview()">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic return estimation info -->
+            <div id="return-preview-info" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; font-size: 0.85rem;"></div>
+          </form>
+        </div>
+
+        <div class="split-layout">
+          <!-- Pending Debts Table -->
+          <div class="glass-panel">
+            <h3><i data-feather="alert-circle" style="vertical-align: middle; margin-right: 0.5rem; color: var(--warning);"></i>Adeudos Pendientes</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">Multas pendientes por retraso de libros.</p>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID Adeudo</th>
+                    <th>Matrícula</th>
+                    <th>Libro</th>
+                    <th>Motivo / Daño</th>
+                    <th>Días Retraso</th>
+                    <th>Monto Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="table-debts-list">
+                  <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted);">Cargando deudas...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Validation of Online Payments (Transferencias) -->
+          <div class="glass-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+            <h3><i data-feather="file-text" style="vertical-align: middle; margin-right: 0.5rem; color: var(--accent);"></i>Validar Transferencias Bancarias (En Línea)</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">Valida los recibos de pago electrónicos cargados por los usuarios.</p>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Adeudo</th>
+                    <th>Monto</th>
+                    <th>F. Pago</th>
+                    <th>Archivo / Ref</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="table-validation-list">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted);">No hay transferencias pendientes de validar.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN DATABASE EXPLORER SECTION -->
+      <div id="view-admin-db" class="app-view">
+        <div class="database-view-grid">
+          <!-- SQL Console -->
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div class="glass-panel" style="padding-bottom: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3><i data-feather="terminal" style="vertical-align: middle; margin-right: 0.5rem; color: var(--success);"></i>Consola SQL Interactiva (LDB Engine)</h3>
+                <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.3); color: var(--danger);" onclick="executeSQLQuery('RESET')">
+                  <i data-feather="refresh-cw" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 0.25rem;"></i> Restablecer DB
+                </button>
+              </div>
+              <div class="terminal" id="sql-terminal" onclick="focusTerminalInput()">
+                <div class="terminal-header">
+                  <div class="terminal-dots">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                  </div>
+                  <span class="terminal-title">BIBLIO-SQL v1.0.0</span>
+                  <span></span>
+                </div>
+                <div class="terminal-body" id="sql-terminal-body">
+                  <div class="terminal-line system">Conectado a la base de datos simulada 'library.db' (localStorage).</div>
+                  <div class="terminal-line system">Tip: Escribe 'HELP' para ver los comandos SQL válidos o 'SELECT * FROM libros;'.</div>
+                </div>
+                <div class="terminal-input-line">
+                  <span class="terminal-prompt">library.db&gt;</span>
+                  <input type="text" id="sql-terminal-input" class="terminal-input" placeholder="Escribe tu consulta SQL aquí..." onkeydown="handleTerminalCommand(event)">
+                </div>
+              </div>
+            </div>
+            
+            <!-- SQL Console History Output -->
+            <div class="glass-panel" id="sql-results-panel" style="display: none; max-height: 300px; overflow-y: auto;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h4>Resultado de la Consulta</h4>
+                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="clearSQLResults()">Limpiar</button>
+              </div>
+              <div class="table-wrapper" id="sql-results-table-container"></div>
+            </div>
+          </div>
+
+          <!-- Relational Tables list & schema status -->
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div class="glass-panel">
+              <h3><i data-feather="table" style="vertical-align: middle; margin-right: 0.5rem; color: var(--accent);"></i>Tablas de la Base de Datos</h3>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Estructura relacional guardada.</p>
+              <div class="db-tables-list">
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM usuarios;')">
+                  <div class="db-table-info">
+                    <h4>usuarios</h4>
+                    <p>id_usuario, nombre, matricula, correo, tipo_usuario</p>
+                  </div>
+                  <span id="count-usuarios" class="db-table-count">0</span>
+                </div>
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM libros;')">
+                  <div class="db-table-info">
+                    <h4>libros</h4>
+                    <p>id_libro, titulo, autor, editorial, estado, categoria, copias_totales, copias_disponibles, estante</p>
+                  </div>
+                  <span id="count-libros" class="db-table-count">0</span>
+                </div>
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM prestamos;')">
+                  <div class="db-table-info">
+                    <h4>prestamos</h4>
+                    <p>id_prestamo, id_usuario, id_libro, fecha_prestamo, ...</p>
+                  </div>
+                  <span id="count-prestamos" class="db-table-count">0</span>
+                </div>
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM adeudos;')">
+                  <div class="db-table-info">
+                    <h4>adeudos</h4>
+                    <p>id_adeudo, id_prestamo, estado, dias_retraso, monto_dano, motivo, monto_total</p>
+                  </div>
+                  <span id="count-adeudos" class="db-table-count">0</span>
+                </div>
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM pagos;')">
+                  <div class="db-table-info">
+                    <h4>pagos</h4>
+                    <p>id_pago, id_adeudo, monto, fecha_pago, tipo_pago, validado</p>
+                  </div>
+                  <span id="count-pagos" class="db-table-count">0</span>
+                </div>
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM comprobantes;')">
+                  <div class="db-table-info">
+                    <h4>comprobantes</h4>
+                    <p>id_comprobante, id_pago, folio, fecha</p>
+                  </div>
+                  <span id="count-comprobantes" class="db-table-count">0</span>
+                </div>
+                <div class="db-table-item" onclick="executeSQLQuery('SELECT * FROM cola_espera;')">
+                  <div class="db-table-info">
+                    <h4>cola_espera</h4>
+                    <p>id_reserva, id_usuario, id_libro, fecha_reserva, estado, fecha_disponible</p>
+                  </div>
+                  <span id="count-cola_espera" class="db-table-count">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DER Diagram view panel -->
+        <div class="glass-panel" style="margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3><i data-feather="git-commit" style="vertical-align: middle; margin-right: 0.5rem; color: var(--secondary);"></i>Diagrama Entidad-Relación Dinámico (DER)</h3>
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">Recuento de relaciones y esquemas actualizados en tiempo real</span>
+          </div>
+          <div id="schema-canvas-wrapper">
+            <svg id="schema-svg">
+              <!-- Elements will be drawn dynamically in db-schema.js -->
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================================================
+           USER VIEWS
+           ========================================================================== */
+
+      <!-- USER CATALOGUE -->
+      <div id="view-user-catalog" class="app-view">
+        <div class="glass-panel">
+          <div class="search-bar">
+            <div class="input-wrapper" style="flex-grow: 1;">
+              <i data-feather="search"></i>
+              <input type="text" id="search-catalog-input" class="form-input" placeholder="Buscar libros en la biblioteca escolar..." oninput="filterCatalogGrid()">
+            </div>
+            <select id="filter-catalog-category" class="form-input" style="width: 200px;" onchange="filterCatalogGrid()">
+              <option value="">Todas las Categorías</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Alerts container for pending book requests -->
+        <div id="user-catalog-alert-container"></div>
+
+        <div class="catalog-grid" id="catalog-grid-container">
+          <!-- Will be generated dynamically -->
+        </div>
+      </div>
+
+      <!-- USER MY LOANS -->
+      <div id="view-user-myloans" class="app-view">
+        <div class="glass-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3><i data-feather="calendar" style="vertical-align: middle; margin-right: 0.5rem; color: var(--primary);"></i>Mis Préstamos de Biblioteca</h3>
+            <span id="user-loans-count-pill" class="badge badge-info">0 préstamos</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">Consulta los libros que tienes actualmente en préstamo y el estado de tus entregas.</p>
+          
+          <!-- Alerts for Pending Requests & Expiring Deadlines (3, 2, 1 days) -->
+          <div id="user-loans-alerts-container"></div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Libro</th>
+                  <th>Fecha Préstamo</th>
+                  <th>Fecha Límite de Entrega</th>
+                  <th>Fecha Devolución Real</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="table-user-loans">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted);">No tienes préstamos registrados.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USER MY DEBTS -->
+      <div id="view-user-mydebts" class="app-view">
+        <div class="split-layout">
+          <!-- Outstanding debts table -->
+          <div class="glass-panel">
+            <h3><i data-feather="alert-octagon" style="vertical-align: middle; margin-right: 0.5rem; color: var(--danger);"></i>Mis Adeudos y Multas</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Liquidación de recargos generados por entregas tardías.</p>
+            
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Libro Devuelto</th>
+                    <th>Concepto / Detalle del Recargo</th>
+                    <th>Días Retraso</th>
+                    <th>Monto Total</th>
+                    <th>Estado de Pago</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="table-user-debts">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted);">No tienes adeudos pendientes.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pay Debt Form (Mock Bank Transfer Upload) -->
+          <div class="glass-panel" id="user-pay-panel" style="display: none;">
+            <h3><i data-feather="credit-card" style="vertical-align: middle; margin-right: 0.5rem; color: var(--accent);"></i>Pagar por Transferencia Bancaria</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Carga tu comprobante de pago para que el administrativo lo valide manualmente.</p>
+            
+            <div style="background: rgba(0,0,0,0.15); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.8rem;">
+              <strong>Datos de Cuenta de la Institución:</strong><br>
+              Banco Escolar • CLABE: <span style="font-family: var(--font-mono); color: var(--accent);">123 456 789 012 345 678</span><br>
+              Referencia: <span id="transfer-ref-tag" style="font-family: var(--font-mono); font-weight: bold;">MULTA-123</span>
+            </div>
+
+            <form id="form-pay-transfer" onsubmit="handlePayTransfer(event)">
+              <input type="hidden" id="pay-adeudo-id">
+              <div class="form-group">
+                <label for="pay-monto">Monto a Validar ($)</label>
+                <input type="text" id="pay-monto" class="form-input" readonly>
+              </div>
+              <div class="form-group">
+                <label for="pay-referencia">Número de Autorización / Referencia</label>
+                <input type="text" id="pay-referencia" class="form-input" placeholder="Ej. TXN-892749" required>
+              </div>
+              <div class="form-group">
+                <label>Recibo de Transferencia (.png, .jpg)</label>
+                <div class="file-upload-zone" id="file-upload-zone" onclick="triggerFileSelect()">
+                  <i data-feather="upload-cloud"></i>
+                  <p>Haz clic para simular la subida de un comprobante</p>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Se creará un recibo de prueba</span>
+                </div>
+                <input type="file" id="pay-file-input" style="display: none;" onchange="handleFileSelect(event)">
+                <div id="file-upload-preview" style="display: none;"></div>
+              </div>
+              <button type="submit" id="btn-submit-pay-transfer" class="btn btn-accent" style="width: 100%; margin-top: 1rem;">
+                <i data-feather="send"></i> Notificar Pago al Administrativo
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- USER MY RECEIPTS -->
+      <div id="view-user-myreceipts" class="app-view">
+        <div class="glass-panel">
+          <h3><i data-feather="file-text" style="vertical-align: middle; margin-right: 0.5rem; color: var(--success);"></i>Mis Comprobantes de Pago</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Descarga e imprime tus comprobantes digitales oficiales una vez aprobados.</p>
+          
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th>Fecha Emisión</th>
+                  <th>Monto Pagado</th>
+                  <th>Tipo Pago</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="table-user-receipts">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted);">No se han generado comprobantes oficiales.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================================
+       MODALS
+       ========================================================================== -->
+
+  <!-- Ticket Print Modal -->
+  <div id="modal-ticket" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-ticket-title">Comprobante de Operación</h3>
+        <button class="modal-close" onclick="closeModal('modal-ticket')"><i data-feather="x"></i></button>
+      </div>
+      <div class="modal-body" style="background-color: var(--bg-primary); padding: 2rem 0;">
+        <div id="ticket-container">
+          <!-- Generated receipt goes here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-ticket')">Cerrar</button>
+        <button class="btn btn-primary" onclick="window.print()">
+          <i data-feather="printer"></i> Imprimir Ticket
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Shelf (Modificar Ubicación Física de Libro) -->
+  <div id="modal-edit-shelf" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.5rem;"><i data-feather="map-pin" style="color: var(--primary);"></i> Modificar Estante / Ubicación</h3>
+        <button class="modal-close" onclick="closeModal('modal-edit-shelf')"><i data-feather="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <input type="hidden" id="edit-shelf-book-id">
+        <p id="edit-shelf-book-title" style="font-weight: 600; margin-bottom: 1.25rem; color: var(--text-primary); font-size: 0.95rem;"></p>
+        <div class="form-group">
+          <label for="edit-shelf-input"><i data-feather="map-pin" style="width: 14px; height: 14px; vertical-align: middle;"></i> Estante / Ubicación Física en Biblioteca</label>
+          <div class="input-wrapper">
+            <i data-feather="map-pin"></i>
+            <input type="text" id="edit-shelf-input" class="form-input" placeholder="Ej. Estante A-2, Pasillo 1" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-edit-shelf')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveBookShelf()">
+          <i data-feather="save"></i> Guardar Ubicación
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       TOAST ALERTS SYSTEM
+       ========================================================================== -->
+  <div id="toast-container"></div>
+
+  <!-- Application Logic Scripts -->
+  <script src="db-schema.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

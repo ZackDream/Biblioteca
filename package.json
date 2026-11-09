@@ -1,0 +1,29 @@
+{
+  "name": "sistema-biblioteca",
+  "version": "1.0.0",
+  "description": "Sistema de Control de Préstamos y Pagos de Biblioteca",
+  "main": "server.js",
+  "scripts": {
+    "init-db": "node -e \"const db = require('./database'); db.initializeDatabase();\"",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node pruebas_etapa6/ejecutar_pruebas.js",
+    "test:funcional": "node pruebas_etapa6/01_pruebas_funcionales.js",
+    "test:usabilidad": "node pruebas_etapa6/02_pruebas_usabilidad.js",
+    "test:rendimiento": "node pruebas_etapa6/03_pruebas_carga_rendimiento.js"
+  },
+  "keywords": [
+    "library",
+    "loans",
+    "payments",
+    "sqlite",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}
